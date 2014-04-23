@@ -1,0 +1,59 @@
+  
+  
+table, td, tr {
+	border-collapse: collapse;
+	border: 1px solid black;
+	border-spacing: 0;
+	font-family: tahoma, sans-serif;
+	font-size: .8em;
+	padding: 0;
+}
+#ed {
+	background-color: blue;
+}
+     
+    .ace_editor {
+        position: relative !important;
+        border: 2px solid lightgray;
+        margin: 2px;
+        height: 250px;
+        width: 99%;
+    }
+
+    .ace_editor.fullScreen {
+        height: auto;
+        width: auto;
+        border: 0;
+        margin: 0;
+        position: fixed !important;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        background: white;
+    }
+
+    .fullScreen {
+        overflow: hidden
+    }
+
+    .scrollmargin {
+        height: 10px;
+        text-align: center;
+    }
+
+    .large-button {
+        color: lightblue;
+        cursor: pointer;
+        font: 30px arial;
+        padding: 20px;
+        text-align: center;
+        border: medium solid transparent;
+        display: inline-block;
+    }
+    .large-button:hover {
+        border: medium solid lightgray;
+        border-radius: 10px 10px 10px 10px;
+        box-shadow: 0 0 12px 0 lightblue;
+    }
