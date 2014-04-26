@@ -1,34 +1,47 @@
 var $ = document.getElementById.bind(document);
-var dom = require("ace/lib/dom");
+var dom = require("ace/lib/dom"); // See - https://github.com/ajaxorg/ace 
+var nextKey;
+var key = "";
 
-var db = new PouchDB('dbn2'),
-    remote = 'http://zip:16120zip@localhost:5984/db2',
+//PouchDB can work on its own without a remote Couchdb if preferred. 
+// See -- https://github.com/pouchdb/pouchdb
+
+var db = new PouchDB('db1'),
+    remote = 'http://userName:passwordp@localhost:5984/db1', //This references a local instance of Couchdb.
     opts = {
-      continuous: true
+      continuous: true 
 };
 
 db.replicate.to(remote, opts);
 db.replicate.from(remote, opts);
 
-function openF(){
+//Opens a file from the local file system.
+function openFile(){
 	var xhr = new XMLHttpRequest();
 	var fname = prompt("File Name:");
+	if (fname){
 	xhr.open("GET", fname, true);
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState === 4){
 			var text = xhr.responseText;
 			$('titlebox').value = fname;
 			$('fileName').innerHTML = fname;
-			//$('pageTitle').innerHTML = "Editor  "fname;
+			//$('pageTitle').innerHTML = "Editor  " + fname;
 			editor.insert(text);
-		}
+}
+
 };
 xhr.send(null);
 }
+}
 
-function saveF(){
+function saveFile(){
 	var text = editor.getValue();
 	var fname = $("titlebox").value;
+	if (fname === ""){
+		alert("Enter File Name:");
+	}
+	else {
     var Download = {
         click : function(node) {
             var ev = document.createEvent("MouseEvents");
@@ -51,16 +64,30 @@ function saveF(){
     };
 	Download.save(text, fname);
 }
+}
 
-function newF(){
-	clear3();
+function newFile(){
 	var nam = prompt("Enter file name:");
 	$("fileName").innerHTML = nam;
 	$('titlebox').value = nam;
 	$('pageTitle').innerHTML = "Editor  " + nam;
 }
 
-function cp(){
+
+//Cut
+function _cut(){
+    txt = editor.getCopyText();
+	editor.insert("");
+    document.oncut = function(event) {
+    event.clipboardData.setData("Text", txt);
+    event.preventDefault();
+    };
+    document.execCommand("Cut");
+    document.oncut = undefined;
+}
+
+//Copy
+function _copy(){
     txt = editor.getCopyText();
     document.oncopy = function(event) {
     event.clipboardData.setData("Text", txt);
@@ -69,91 +96,21 @@ function cp(){
     document.execCommand("Copy");
     document.oncopy = undefined;
 }
+//Paste
 
 function paste(){
     editor.insert(txt);
 	return editor.focus(true);
 }
 
-function clear3(){   // Clears all text from boxes.
-	$('id').value = "";
-	$('titlebox').value = "";
-	$('fileName').innerHTML = "No Name";
-	$('pageTitle').innerHTML = "Editor";
-   editor.setValue('');
-	editor.focus(true);
-}
 
-function saveD() {  
-	db.put({
-       _id: $('id').value,
-       title: $('titlebox').value,
-       content: editor.getValue()
-       });
-	//clear3();
-}
-
-function getDoc(id){    // Gets a document from the database.
-		id = $('id').value;
-	db.get(id, function(err, doc) {
-		$('id').value = doc._id;
-		$('titlebox').value = doc.title;
-		$('fileName').innerHTML = doc.title;
-		$('pageTitle').innerHTML = "Editor  " + doc.title;
-		editor.insert(doc.content);
-		editor.focus();
-		editor.session.selection.clearSelection();
-	}
-)}
-
-function upDate(){
-	var id = $('id').value;
-	var t =  $('titlebox').value;
-	var c =  editor.getValue();
-		db.get(id).then(function(otherDoc) {
-  return db.put({
-    _id: id,
-    _rev: otherDoc._rev,
-    title: t,
-	content: c
-  });
-}, function(err, response) {
-  if (err) {
-    // on error
-  } else {
-    console.log('success');
-  }
-});	 
-	//clear3();
-}
-
-function del(){   //deletes a document from the database whose _id is in the id.
-	var id = $('id').value;
-	db.get(id).then(function(doc) {
-	return db.remove(doc);
-		}).catch(function(err){
-			//errors
-	});
-	$('id').value = "";
-}
-
-function mkLink(){
-	var t =  $('titlebox').value,
-        id = $('id').value,
-        list = $("list1"),
-        kids = list.children,
-        kds = Array.prototype.slice.call(kids),
-        fn = function(element, index, kds){list.appendChild(element);},
-        item = "<li><a href=\"javascript:reCallDoc('" + id + "');\">" + id + " "  + t + "</a></li>";
-    list.innerHTML = item;
-    kds.forEach(fn);
-}
+//Lists all document in the database. -- needs revision to limit the return to 20 at a time.
 
 function list1(){
 	$("list").innerHTML = "";
 db.allDocs({include_docs: true}, function(err, dsD) {
     var totalRows = dsD.total_rows;
-	var s = ["<li><a href=\"javascript:reCallDoc('", "", "');\">", "", " ", "", "</a></li>"];
+	var s = ["<li><a href=\"javascript:getDoc('", "", "');\">", "", " ", "", "</a></li>"];
     var lst = [];
 	
 for (i = 0; i < totalRows; i++) {
@@ -164,9 +121,11 @@ for (i = 0; i < totalRows; i++) {
         lst.sort(function(p, q){
         return p.id-q.id;
     });
-    
-    var oLength = lst.length;
-for (i = 0; i < oLength; i++) {
+        var l = lst.length - 1;
+	var m = lst[l];
+	nextKey = parseInt(m.id) + 1;
+	$("state").innerHTML = nextKey;
+for (i = 0; i < l; i++) {
         var o1 = lst.pop();
 		var o = o1.id;
 		var p = o1.title;
@@ -177,19 +136,120 @@ for (i = 0; i < oLength; i++) {
 	list.innerHTML += item;
     }
 });	
+return editor.focus(true);
 }
 
-function reCallDoc(id){
-	$('id').value = id;
-	getDoc();
+//Adds a link to the Documents List ---- mkLink()
+// Gets a document from the database.
+
+function sav(){
+	if ($("titlebox").value === ""){
+		alert('Please Enter a Title\n or File Name.');
+	}
+    var k = parseInt(key, 10);
+    var nk = parseInt(nextKey, 10);
+    
+    if (k < nk){
+        upDate();
+    }
+    else{
+        saveD();
+    }
+	
+}
+/*
+function next(){
+    db.get("0", function(err, doc) {
+	nextKey = doc.title;
+	$("state").innerHTML = nextKey;
+}
+)}
+*/
+
+function clr(){
+	$("state").innerHTML = nextKey;
+	key = "";
+	$('titlebox').value = "";
+	$('fileName').innerHTML = "No Name";
+	$('pageTitle').innerHTML = "Editor";
+	editor.setValue('');
+	editor.focus(true);
+	setTimeout(function(){window.scrollTo(0,0)},250);
 }
 
+//    <a href="javascript:reCallDoc('27');">27 Another Doc</a>
+
+function getDoc(k){
+        $("state").innerHTML = k;
+		key = k;
+		db.get(key, function(err, doc) {
+		$('titlebox').value = doc.title;
+		$('fileName').innerHTML = doc.title;
+		$('pageTitle').innerHTML = "Editor  " + doc.title;
+		editor.insert(doc.content);
+		editor.focus();
+		editor.session.selection.clearSelection();
+	}
+)}
+
+
+function saveD() {
+	var k = nextKey.toString();
+   	db.put({
+    _id: k,//@
+    title: $('titlebox').value,
+    content: editor.getValue()
+    });
+	//incIndex();
+	clr();
+	window.scrollTo(0,0);
+	setTimeout(function(){list1()},250);
+}
+
+//Updates a document.
+function upDate(){
+	var k = key;
+	var t =  $('titlebox').value;
+	var c =  editor.getValue();
+		db.get(k).then(function(otherDoc) {
+  return db.put({
+    _id: k,
+    _rev: otherDoc._rev,
+    title: t,
+    content: c
+  });
+}, function(err, response) {
+  if (err) {
+    // on error
+  } else {
+    console.log('success');
+	
+  }
+});	 
+	clr();
+	window.scrollTo(0,0);
+	setTimeout(function(){list1()},250);	
+}
+
+//deletes a document from the database whose _id is in the id inputbox.
+function del(){   
+	db.get(key).then(function(doc) {
+	return db.remove(doc);
+		}).catch(function(err){
+			//errors
+	});
+	key = "";
+	clr();
+	setTimeout(function(){list1()},250);
+}
+
+//Clears the Documents List.
 function clist(){
 	$("list").innerHTML = "";
 }
-
+//Before and After cursor.
 function ba(b,a){
-	cp();
+	_copy();
     var wrp = [b,a];
     wrp.splice(1, 0, txt);
     txt = wrp.join("");
@@ -197,12 +257,13 @@ function ba(b,a){
 	return editor.focus(true);
 }
 
+//Moves cursor to speed up editing.
 function setcur(t, num){
 	editor.insert(t);
 	editor.navigateLeft(num);
 	return editor.focus(true);
 }
-
+//Toggles the visibility of an element.
 function visTog(elem){
     if (!$){
     return;
@@ -215,8 +276,9 @@ function visTog(elem){
         }
 }
 
+//Wraps selected text with an arg indicated HTML tag.
 function wrap(tag){
-    cp();
+    _copy();
     var wrp = ["<", ">", "</", ">"];
     wrp.splice(1, 0, tag);
     wrp.splice(3, 0, txt);
@@ -226,11 +288,10 @@ function wrap(tag){
 	return editor.focus(true);
 }
 
-function fr() {
-    var fl = "var i;\nfor (i = 0; i < ; i++) {\n\n}";
-    editor.insert(fl);
-}
 
+// fr()
+
+//Makes array literal from word list.
 function aRay() {
 	var gw = prompt('Enter words.');
 	var x = gw.split(" ");
@@ -253,11 +314,7 @@ str = str.join("");
 editor.insert(str);
 }
 
-function cl(){
-    var log = "console.log();";
-    editor.insert(log);
-}
-
+//Creates an Object literal (keys only) from a word list.
 function oStub(){
 	var ostr = prompt("Enter words.");
 	var a = ostr.split(" "); //quick split 
@@ -275,11 +332,13 @@ function oStub(){
 	return editor.focus(true);
 }
 
-
-
-
+function htm(){
+	var htm = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<title></title>\n</head>\n<body>\n\n</body>\n</html>';
+	editor.insert(htm);
+}
 
 //---------------------------------------------------------------------
+
 //---------------------------------------------------------------------
 //add command to all new editor instaces
 require("ace/commands/default_commands").commands.push({
@@ -355,5 +414,3 @@ function foo() {
     editor.setFontSize(parseInt(14,10));
     editor.setShowInvisibles(true);
 }
-
-

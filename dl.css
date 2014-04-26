@@ -1,3 +1,9 @@
+#state {
+	font-family:arial;
+	font-size:14px;
+	font-weight:bold;
+}
+
 input {
 	font-family:arial;
 	font-size:14px;
@@ -16,6 +22,8 @@ input {
 #hotKey {
 	background-color: blue;
 	display: block;
+	font-family:arial;
+	font-size: 1.3em;
 	}
     
 button {
@@ -51,7 +59,8 @@ table, td, tr {
 }
 
 #list {
-	font-size: 1.7em;
+	font-size: 1.3em;
+	font-weight: bold;
 }
 
 #row2_col2 {
@@ -62,7 +71,7 @@ table, td, tr {
         position: relative !important;
         border: 0;
         margin: 0;
-        height: 1200px;
+        height: 600px;
         width: 99%;
     }
 
